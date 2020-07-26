@@ -1,0 +1,81 @@
+---
+title: "Week 11_Helee"
+author: "Helee Rana"
+date: "5/4/2020"
+output:
+  word_document: default
+  html_document: default
+---
+
+## Prediction about the customer will continue the Phone service with the company or not
+```{r}
+require(tidyverse)
+
+churn=read.csv("/Users/heleerana/Desktop/DATA MINING Prof. YEGIN/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+head(churn)
+
+```
+
+## Since Senior citizen columnis in 0s and 1s (integer), we will need to convert to character
+```{r}
+churn=churn%>%mutate(SeniorCitizen=as.character(SeniorCitizen))
+
+## We dont require customer id
+
+churn=churn%>%select(-customerID)
+
+```
+
+## Now we have tenure and other 3 columns as integer value, to implement naive bayes, the integer values in a column should be normally distributed. So lets check whether tenure other 3 columns are normally distributed or not
+```{r}
+hist(churn$tenure) ## Candidate for binning
+## We can see that the graph is not normally distributed
+## Now two options are to ignore the tenure column OR binning
+
+hist(churn$MonthlyCharges) ## Candidate for binning
+## Same for MonthlyCharges
+
+hist(churn$TotalCharges)
+## The graph seems exponential, Therefore now we take square root of the values
+hist(sqrt(churn$TotalCharges)) ## sqrt transformation
+```
+```{r}
+## Binning, that means dividing the values into two
+ ## one method 
+##cbind(churn$tenure, as.factor(cut(churn$tenure, 2)))
+
+## second method if we  want to insert labels as low and high
+##churn%>%mutate(tenure=cut(tenure,2, labels=c('low', 'high')))
+
+## Now we apply the second method to tenure, monthlycharges
+churn2=churn%>%mutate(tenure=cut(tenure,2), MonthlyCharges=cut(MonthlyCharges, 4), TotalCharges=sqrt(TotalCharges))
+```
+
+
+## Model Building and evaluation
+```{r}
+set.seed(1234)
+n=nrow(churn2)
+training=runif(n)>.3
+training_data=churn2[training,]
+testing_data=churn2[!training,]
+
+library(e1071)
+require(caret)
+
+nb_model=naiveBayes(training_data[-20], as.factor(training_data$Churn))
+```
+
+## prediction
+```{r}
+predictions=predict(nb_model, testing_data[-20], laplace=.1)
+```
+
+
+## Confusion Matrix
+```{r}
+confusionMatrix(as.factor(predictions), as.factor(testing_data$Churn))
+```
+
+
+
